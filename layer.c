@@ -3,6 +3,16 @@
 #include <string.h>
 #include <math.h>
 
+const static float EPSILON = 1.0e-8f, BETA1 = 0.9, BETA2 = 0.999;
+
+struct layer
+{
+    float *weights, *biases;
+    int input_size, output_size;
+    float *x, *y;
+    int sample_size;
+};
+
 static float random_normal(float mean, float sd)
 {
     float u1 = rand() / (float)RAND_MAX;
@@ -78,14 +88,6 @@ static float *copy(float *array, int length)
     return array_copy;
 }
 
-struct layer
-{
-    float *weights, *biases;
-    int input_size, output_size;
-    float *x, *y;
-    int sample_size;
-};
-
 layer *layer_init(int input_size, int output_size)
 {
     layer *l = calloc(1, sizeof(layer));
@@ -116,8 +118,6 @@ float *layer_forward(layer *l, float *x, int sample_size)
     return l->y;
 }
 
-const float EPSILON = 1.0e-8f;
-
 float *layer_backward(layer *l, float *y_err, float learning_rate, int t)
 {
     for (int i = 0; i < l->output_size * l->sample_size; ++i)
@@ -131,14 +131,29 @@ float *layer_backward(layer *l, float *y_err, float learning_rate, int t)
     float *db = sum_columns(y_err, l->sample_size, l->output_size);
 
     // ADAM optimiser
-    float k = sqrtf(10.0 - 10.0 * powf(0.999, t)) / (1.0 - powf(0.9, t));
+    float beta1_t = powf(BETA1, t);
+    float beta2_t = powf(BETA2, t);
+
     for (int i = 0; i < l->input_size * l->output_size; ++i)
     {
-        l->weights[i] -= dw[i] * learning_rate * (1 + k / (fabsf(dw[i]) + EPSILON));
+        l->weights[i] -= dw[i] * learning_rate;
+
+        float m = (1 - BETA1) * dw[i];
+        float v = (1 - BETA2) * powf(dw[i], 2);
+        float m_hat = m / (1 - beta1_t);
+        float v_hat = v / (1 - beta2_t);
+        l->weights[i] -= learning_rate * m_hat / (sqrtf(v_hat) + EPSILON);
     }
+
     for (int i = 0; i < l->output_size; ++i)
     {
-        l->biases[i] -= db[i] * learning_rate * (1 + k / (fabsf(db[i]) + EPSILON));
+        l->biases[i] -= db[i] * learning_rate;
+
+        float m = (1 - BETA1) * db[i];
+        float v = (1 - BETA2) * powf(db[i], 2);
+        float m_hat = m / (1 - beta1_t);
+        float v_hat = v / (1 - beta2_t);
+        l->biases[i] -= learning_rate * m_hat / (sqrtf(v_hat) + EPSILON);
     }
 
     // Calculate the gradient with respect to the input
@@ -149,6 +164,7 @@ float *layer_backward(layer *l, float *y_err, float learning_rate, int t)
     free(dw);
     free(db);
     free(w_t);
+    free(y_err);
 
     return x_err;
 }

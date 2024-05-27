@@ -54,7 +54,7 @@ int main()
     dataset ds = load_mnist("train-images-idx3-ubyte", "train-labels-idx1-ubyte");
 
     int layers[] = {ds.input_size, 80, 40, ds.output_size};
-    network *nn = network_init(layers, 3, 0.001, 0.001);
+    network *nn = network_init(layers, 3);
 
     for (int epoch = 0; epoch < 100; ++epoch)
     {

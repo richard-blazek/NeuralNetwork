@@ -3,21 +3,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+const static float DECAY = 0.001, LEARNING_RATE = 0.001;
+
 struct network
 {
     layer **layers;
     int layer_count, epoch, output_size;
-    float learning_rate, decay;
 };
 
-network *network_init(int *layer_sizes, int layer_count, float learning_rate, float decay)
+network *network_init(int *layer_sizes, int layer_count)
 {
     network *n = malloc(sizeof(network));
     n->layer_count = layer_count;
     n->epoch = 0;
     n->output_size = layer_sizes[n->layer_count];
-    n->learning_rate = learning_rate;
-    n->decay = decay;
     n->layers = malloc(layer_count * sizeof(layer *));
 
     for (int i = 0; i < n->layer_count; ++i)
@@ -70,7 +69,7 @@ static float accuracy(float *y_hat, float *y, int sample_size, int output_size)
 
 static void backward(network *n, float *y_err)
 {
-    float learning_rate = n->learning_rate / (1 + n->decay * n->epoch);
+    float learning_rate = LEARNING_RATE / (1 + DECAY * n->epoch);
     int t = n->epoch + 1;
 
     for (int i = n->layer_count - 1; i >= 0; --i)
