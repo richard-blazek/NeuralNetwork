@@ -54,6 +54,11 @@ static void clip(float *array, int length, float floor, float ceiling)
     }
 }
 
+static void ReLU(float *array, int length)
+{
+    clip(array, length, 0, INFINITY);
+}
+
 static float *transpose(float *matrix, int rows, int cols)
 {
     float *transposed = malloc(rows * cols * sizeof(float));
@@ -93,9 +98,10 @@ layer *layer_init(int input_size, int output_size)
     layer *l = calloc(1, sizeof(layer));
     l->input_size = input_size;
     l->output_size = output_size;
-    l->weights = calloc(input_size * output_size, sizeof(layer));
+    l->weights = malloc(input_size * output_size * sizeof(layer));
     l->biases = calloc(output_size, sizeof(layer));
 
+    // HE-initialisation: W ~ Norm(0, 2 / n)
     float sd = sqrtf(2.0f / input_size);
     for (int i = 0, len = input_size * output_size; i < len; ++i)
     {
@@ -106,15 +112,18 @@ layer *layer_init(int input_size, int output_size)
 
 float *layer_forward(layer *l, float *x, int sample_size)
 {
+    x = copy(x, l->input_size * l->sample_size);
+
+    // y = ReLU(x * w + b)
+    float *y = multiply(x, l->weights, sample_size, l->input_size, l->output_size);
+    add(y, l->biases, l->output_size * sample_size, l->output_size);
+    ReLU(y, l->output_size * sample_size);
+
     free(l->x);
     free(l->y);
-
     l->sample_size = sample_size;
-    l->x = copy(x, l->input_size * l->sample_size);
-    l->y = multiply(l->x, l->weights, l->sample_size, l->input_size, l->output_size);
-    add(l->y, l->biases, l->output_size * l->sample_size, l->output_size);
-    clip(l->y, l->output_size * l->sample_size, 0, INFINITY);
-
+    l->x = x;
+    l->y = y;
     return l->y;
 }
 
@@ -125,7 +134,7 @@ float *layer_backward(layer *l, float *y_err, float learning_rate, int t)
         y_err[i] *= l->y[i] > 0;
     }
 
-    // Calculate the derivative with respect to the weight and bias
+    // Derivative of the error with respect to the weight and bias
     float *x_t = transpose(l->x, l->sample_size, l->input_size);
     float *dw = multiply(x_t, y_err, l->input_size, l->sample_size, l->output_size);
     float *db = sum_columns(y_err, l->sample_size, l->output_size);
@@ -165,7 +174,6 @@ float *layer_backward(layer *l, float *y_err, float learning_rate, int t)
     free(db);
     free(w_t);
     free(y_err);
-
     return x_err;
 }
 
