@@ -7,7 +7,7 @@
 typedef struct dataset
 {
     float *x, *y;
-    int input_size, output_size, sample_size;
+    int input_size, output_size, dataset_size;
 } dataset;
 
 int get_int(FILE *file)
@@ -25,21 +25,21 @@ dataset load_mnist(const char *image_path, const char *label_path)
     dataset ds;
 
     assert(get_int(image_file) == 2051);
-    ds.sample_size = get_int(image_file);
+    ds.dataset_size = get_int(image_file);
     ds.input_size = get_int(image_file) * get_int(image_file);
 
     assert(get_int(label_file) == 2049);
-    assert(get_int(label_file) == ds.sample_size);
+    assert(get_int(label_file) == ds.dataset_size);
     ds.output_size = 10;
 
-    ds.x = malloc(ds.sample_size * ds.input_size * sizeof(float));
-    for (int i = 0; i < ds.sample_size * ds.input_size; ++i)
+    ds.x = malloc(ds.dataset_size * ds.input_size * sizeof(float));
+    for (int i = 0; i < ds.dataset_size * ds.input_size; ++i)
     {
         ds.x[i] = fgetc(image_file) / 255.0f;
     }
 
-    ds.y = calloc(ds.sample_size * ds.output_size, sizeof(float));
-    for (int i = 0; i < ds.sample_size; ++i)
+    ds.y = calloc(ds.dataset_size * ds.output_size, sizeof(float));
+    for (int i = 0; i < ds.dataset_size; ++i)
     {
         ds.y[i * ds.output_size + fgetc(label_file)] = 1.0f;
     }
@@ -58,7 +58,7 @@ int main()
 
     for (int epoch = 0; epoch < 100; ++epoch)
     {
-        float accuracy = network_train(nn, ds.x, ds.sample_size, ds.y);
+        float accuracy = network_train(nn, ds.x, ds.dataset_size, ds.y);
         printf("Epoch: %d, Accuracy: %.5f\n", epoch, accuracy);
     }
 
