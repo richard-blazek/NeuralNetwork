@@ -126,7 +126,7 @@ layer *layer_init(int input_size, int output_size)
 
 float *layer_forward(layer *l, float *x, int batch_size)
 {
-    x = copy(x, l->input_size * l->batch_size);
+    x = copy(x, l->input_size * batch_size);
 
     // y = ReLU(x * w + b)
     float *y = multiply(x, l->weights, batch_size, l->input_size, l->output_size);
